@@ -16,32 +16,41 @@ const Home: React.FC = () => {
     height: { ideal: 720 },
   };
 
-  // Capture image from the webcam
+  // Function to upload captured image to the backend
+  const uploadImage = async (file: Blob, isCalibration: boolean) => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    if (isCalibration) {
+      formData.append('known_distance', knownDistance.toString());
+      const response = await fetch('/api/calibrate', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await response.json();
+      setIsCalibrated(data.success);
+      alert(data.success ? 'Calibration successful!' : 'Calibration failed.');
+    } else {
+      const response = await fetch('/api/measure', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await response.json();
+      if (data.success) {
+        setDistance(data.distance);
+      } else {
+        alert(data.message);
+      }
+    }
+  };
+
+  // Capture image from the webcam and upload it
   const handleCapture = async (isCalibration: boolean) => {
     const imageSrc = webcamRef.current?.getScreenshot();
     if (imageSrc) {
       setPreviewUrl(imageSrc);
       const file = await fetch(imageSrc).then((res) => res.blob());
-      const formData = new FormData();
-      formData.append('file', file);
-
-      if (isCalibration) {
-        formData.append('known_distance', knownDistance.toString());
-        const response = await fetch('/api/calibrate', {
-          method: 'POST',
-          body: formData,
-        });
-        const data = await response.json();
-        setIsCalibrated(data.success);
-        alert(data.success ? 'Calibration successful!' : 'Calibration failed.');
-      } else {
-        const response = await fetch('/api/measure', {
-          method: 'POST',
-          body: formData,
-        });
-        const data = await response.json();
-        setDistance(data.distance);
-      }
+      await uploadImage(file, isCalibration);
     }
   };
 
