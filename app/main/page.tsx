@@ -3,138 +3,83 @@ import React, { useState, useRef, useEffect } from 'react';
 import Webcam from 'react-webcam';
 
 const Home: React.FC = () => {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [responseMessage, setResponseMessage] = useState<string>('');
   const [isCalibrated, setIsCalibrated] = useState<boolean>(false);
-  const [useCameraMode, setUseCameraMode] = useState<boolean>(false);
-  const [cameraPermission, setCameraPermission] = useState<
-    'granted' | 'denied' | 'prompt' | null
-  >(null);
+  const [distance, setDistance] = useState<number | null>(null);
+  const [useCameraMode, setUseCameraMode] = useState<boolean>(true);
+  const [knownDistance, setKnownDistance] = useState<number>(30);
   const webcamRef = useRef<Webcam>(null);
 
-  // Check for camera permissions
-  useEffect(() => {
-    if (typeof navigator !== 'undefined' && navigator.permissions) {
-      navigator.permissions
-        .query({ name: 'camera' as PermissionName })
-        .then((permissionStatus) => {
-          setCameraPermission(permissionStatus.state);
-          permissionStatus.onchange = () => {
-            setCameraPermission(permissionStatus.state);
-          };
-        })
-        .catch((error) => console.error('Error checking permissions:', error));
-    }
-  }, []);
-
-  // Request camera access if permission is not already granted
-  const requestCameraAccess = async () => {
-    try {
-      await navigator.mediaDevices.getUserMedia({ video: true });
-      setCameraPermission('granted');
-    } catch (error) {
-      setCameraPermission('denied');
-      console.error('Camera access denied:', error);
-    }
-  };
-
-  // Handle file selection and create a preview
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
-      setPreviewUrl(URL.createObjectURL(file));
-    }
+  const videoConstraints = {
+    facingMode: 'environment',
+    width: { ideal: 1280 },
+    height: { ideal: 720 },
   };
 
   // Capture image from the webcam
-  const handleCapture = () => {
+  const handleCapture = async (isCalibration: boolean) => {
     const imageSrc = webcamRef.current?.getScreenshot();
     if (imageSrc) {
       setPreviewUrl(imageSrc);
-    }
-  };
+      const file = await fetch(imageSrc).then((res) => res.blob());
+      const formData = new FormData();
+      formData.append('file', file);
 
-  // Video constraints for `react-webcam`
-  const videoConstraints = {
-    facingMode: 'environment', // Use rear camera if available
-    width: { ideal: 1280 },
-    height: { ideal: 720 },
+      if (isCalibration) {
+        formData.append('known_distance', knownDistance.toString());
+        const response = await fetch('/api/calibrate', {
+          method: 'POST',
+          body: formData,
+        });
+        const data = await response.json();
+        setIsCalibrated(data.success);
+        alert(data.success ? 'Calibration successful!' : 'Calibration failed.');
+      } else {
+        const response = await fetch('/api/measure', {
+          method: 'POST',
+          body: formData,
+        });
+        const data = await response.json();
+        setDistance(data.distance);
+      }
+    }
   };
 
   return (
     <div className="container">
       <h1>{isCalibrated ? 'Measure Distance' : 'Calibrate Camera'}</h1>
-
-      {/* Toggle between camera and file upload mode */}
-      <button
-        onClick={() => setUseCameraMode(!useCameraMode)}
-        className="toggle-button"
-      >
-        {useCameraMode ? 'Use File Upload' : 'Use Camera'}
-      </button>
-
-      {/* Camera Mode */}
       {useCameraMode && (
-        <>
-          {cameraPermission === 'denied' && (
-            <p style={{ color: 'red' }}>
-              Camera access is denied. Please enable camera permissions in your
-              browser settings.
-            </p>
-          )}
-          {cameraPermission === 'prompt' && (
-            <button onClick={requestCameraAccess} className="request-button">
-              Allow Camera Access
+        <div style={{ textAlign: 'center' }}>
+          <Webcam
+            ref={webcamRef}
+            audio={false}
+            screenshotFormat="image/jpeg"
+            videoConstraints={videoConstraints}
+            style={{ width: '100%', borderRadius: '10px' }}
+          />
+          {!isCalibrated ? (
+            <>
+              <input
+                type="number"
+                value={knownDistance}
+                onChange={(e) => setKnownDistance(Number(e.target.value))}
+                placeholder="Known Distance (cm)"
+                style={{ marginTop: '10px' }}
+              />
+              <button onClick={() => handleCapture(true)}>Calibrate</button>
+            </>
+          ) : (
+            <button onClick={() => handleCapture(false)}>
+              Measure Distance
             </button>
           )}
-          {cameraPermission === 'granted' && (
-            <div style={{ textAlign: 'center', marginTop: '20px' }}>
-              <Webcam
-                ref={webcamRef}
-                audio={false}
-                screenshotFormat="image/jpeg"
-                videoConstraints={videoConstraints}
-                style={{ width: '100%', borderRadius: '10px' }}
-              />
-              <button onClick={handleCapture} style={{ marginTop: '20px' }}>
-                Capture Image
-              </button>
-              {previewUrl && (
-                <div>
-                  <h2>Preview:</h2>
-                  <img
-                    src={previewUrl}
-                    alt="Captured"
-                    style={{ maxWidth: '100%' }}
-                  />
-                </div>
-              )}
-            </div>
-          )}
-        </>
-      )}
-
-      {/* File Upload Mode */}
-      {!useCameraMode && (
-        <>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleFileChange}
-            style={{ marginTop: '20px' }}
-          />
           {previewUrl && (
-            <div>
-              <img
-                src={previewUrl}
-                alt="Selected"
-                style={{ maxWidth: '100%' }}
-              />
-            </div>
+            <img src={previewUrl} alt="Captured" style={{ maxWidth: '100%' }} />
           )}
-        </>
+          {distance !== null && (
+            <h2>Estimated Distance: {distance.toFixed(2)} cm</h2>
+          )}
+        </div>
       )}
     </div>
   );
