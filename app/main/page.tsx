@@ -43,8 +43,7 @@ const Home: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const webcamRef = useRef<Webcam>(null);
-const [focalLength, setFocalLength] = useState<number | null>(null);
-
+  const [focalLength, setFocalLength] = useState<number | undefined>(undefined);
   const [resolution, setResolution] = useState(resolutions[0]);
   const [dimensions, setDimensions] = useState<{
     width: number;
@@ -86,10 +85,14 @@ const [focalLength, setFocalLength] = useState<number | null>(null);
 
   // Upload captured image to the backend
   const uploadImage = useCallback(
-    async (file: Blob, isCalibration: boolean) => {
+    async (file: Blob, isCalibration: boolean, focalLength?: number) => {
       const formData = new FormData();
       formData.append('file', file);
-      console.log('FormData:', formData.get('file')); // Debugging line
+
+      // Only add the focal length if it's a measurement request and focalLength is provided
+      if (!isCalibration && focalLength !== undefined) {
+        formData.append('focal_length', focalLength.toString());
+      }
 
       try {
         const endpoint = isCalibration ? '/api/calibrate' : '/api/measure';
@@ -120,8 +123,6 @@ const [focalLength, setFocalLength] = useState<number | null>(null);
     },
     [backendUrl],
   );
-
-
 
   // Capture image from the webcam and upload it
   const handleCapture = useCallback(
