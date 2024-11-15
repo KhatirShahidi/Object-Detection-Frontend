@@ -8,6 +8,9 @@ const Home: React.FC = () => {
   const webcamRef = useRef<Webcam>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isModelLoaded, setIsModelLoaded] = useState(false);
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>(
+    'environment',
+  );
 
   // Load the model
   useEffect(() => {
@@ -57,6 +60,16 @@ const Home: React.FC = () => {
     }
   };
 
+  // Toggle between front and rear cameras
+  const handleCameraSwitch = () => {
+    setFacingMode((prevMode) => (prevMode === 'user' ? 'environment' : 'user'));
+  };
+
+  // Video constraints for the webcam
+  const videoConstraints = {
+    facingMode: facingMode,
+  };
+
   return (
     <div className="container">
       <h1>Real-Time Object Detection</h1>
@@ -66,6 +79,8 @@ const Home: React.FC = () => {
         <Webcam
           ref={webcamRef}
           audio={false}
+          screenshotFormat="image/jpeg"
+          videoConstraints={videoConstraints}
           style={{ width: '100%', borderRadius: '10px' }}
         />
 
@@ -82,6 +97,12 @@ const Home: React.FC = () => {
           }}
         />
       </div>
+
+      {/* Camera Switch Button */}
+      <button onClick={handleCameraSwitch} style={{ marginTop: '20px' }}>
+        Switch Camera ({facingMode === 'user' ? 'Front' : 'Rear'})
+      </button>
+
       {!isModelLoaded && <p>Loading model...</p>}
     </div>
   );
