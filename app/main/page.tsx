@@ -6,6 +6,7 @@ import imageCompression from 'browser-image-compression';
 interface ApiResponse {
   success: boolean;
   distance?: number;
+  focal_length?: number;
 }
 
 // OverlayFrame Component
@@ -111,15 +112,12 @@ const Home: React.FC = () => {
           console.error('Received 422 Error:', data);
         }
 
-        if (isCalibration && data.success) {
+        if (isCalibration && data.success && data.focal_length) {
+          setFocalLength(data.focal_length);
           setIsCalibrated(true);
           alert(messages.en.calibrationSuccess);
         } else if (isCalibration) {
           alert(messages.en.calibrationFailure);
-        } else if (!isCalibration && data.distance !== undefined) {
-          setDistance(data.distance);
-        } else if (!isCalibration) {
-          setErrorMessage(messages.en.measurementFailure);
         }
       } catch (error) {
         console.error('Error uploading image:', error);
@@ -155,12 +153,21 @@ const Home: React.FC = () => {
           console.log('Captured file:', compressedFile);
           console.log('Is calibration:', isCalibration);
           console.log('Focal length:', focalLength);
+          console.log(
+            'Calibration successful, focalLength set to:',
+            focalLength,
+          );
+          console.log('Uploading for measurement, focalLength:', focalLength);
+
 
           await uploadImage(
             compressedFile,
             isCalibration,
-            isCalibrated && focalLength != null ? focalLength : undefined,
+            isCalibrated && typeof focalLength === 'number'
+              ? focalLength
+              : undefined,
           );
+
 
         }
         setIsLoading(false);
