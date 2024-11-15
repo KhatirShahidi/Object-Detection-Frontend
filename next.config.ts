@@ -1,6 +1,24 @@
-// next.config.js
-module.exports = {
+import type { NextConfig } from 'next';
+import type { Configuration } from 'webpack';
+
+const nextConfig: NextConfig = {
   reactStrictMode: true,
+  webpack: (config: Configuration, { isServer }: { isServer: boolean }) => {
+    if (!isServer) {
+      config.resolve = {
+        ...config.resolve,
+        fallback: {
+          ...config.resolve?.fallback,
+          fs: false,
+          path: false,
+          net: false,
+          tls: false,
+          child_process: false,
+        },
+      };
+    }
+    return config;
+  },
   async headers() {
     return [
       {
@@ -19,4 +37,12 @@ module.exports = {
       },
     ];
   },
+  experimental: {
+    esmExternals: 'loose',
+  },
+  images: {
+    domains: ['localhost', 'your-backend-domain.com'],
+  },
 };
+
+export default nextConfig;
