@@ -90,9 +90,8 @@ const Home: React.FC = () => {
       const formData = new FormData();
       formData.append('file', file);
 
-      // Only include focal_length if it's a measurement request
       if (!isCalibration && focalLength !== undefined) {
-        console.log('Sending focal_length:', focalLength); // Debug log
+        console.log('Sending focal_length:', focalLength);
         formData.append('focal_length', focalLength.toString());
       }
 
@@ -108,16 +107,15 @@ const Home: React.FC = () => {
 
         const data: ApiResponse = await response.json();
 
-        if (response.status === 422) {
-          console.error('Received 422 Error:', data);
-        }
-
-        if (isCalibration && data.success && data.focal_length) {
+        if (isCalibration && data.success) {
           setFocalLength(data.focal_length);
           setIsCalibrated(true);
           alert(messages.en.calibrationSuccess);
-        } else if (isCalibration) {
-          alert(messages.en.calibrationFailure);
+        } else if (!isCalibration && data.distance !== undefined) {
+          setDistance(data.distance);
+          alert(`Estimated Distance: ${data.distance.toFixed(2)} cm`);
+        } else if (!isCalibration) {
+          setErrorMessage(messages.en.measurementFailure);
         }
       } catch (error) {
         console.error('Error uploading image:', error);
@@ -126,6 +124,7 @@ const Home: React.FC = () => {
     },
     [backendUrl],
   );
+
 
 
 
