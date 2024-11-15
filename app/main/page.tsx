@@ -123,9 +123,9 @@ useEffect(() => {
   }, [resolution]);
 
   const videoConstraints = {
-    facingMode,
-    width: { ideal: dimensions?.width || 1280 },
-    height: { ideal: dimensions?.height || 720 },
+    facingMode: facingMode,
+    width: { ideal: resolution.width },
+    height: { ideal: resolution.height },
   };
 
 
@@ -226,12 +226,14 @@ useEffect(() => {
         <div className="webcam-frame" style={{ position: 'relative' }}>
           {/* Webcam Feed */}
           <Webcam
+            key={`${facingMode}-${resolution.label}`} // Force re-render on facingMode or resolution change
             ref={webcamRef}
             audio={false}
             screenshotFormat="image/jpeg"
             videoConstraints={videoConstraints}
             style={{ width: '100%', borderRadius: '10px' }}
           />
+
           {/* Overlay Frame */}
           <OverlayFrame width={dimensions.width} height={dimensions.height} />
         </div>
@@ -242,9 +244,9 @@ useEffect(() => {
         <select
           id="camera-select"
           value={facingMode}
-          onChange={(e) =>
-            setFacingMode(e.target.value as 'user' | 'environment')
-          }
+          onChange={(e) => {
+            setFacingMode(e.target.value as 'user' | 'environment');
+          }}
         >
           <option value="user">Front Camera</option>
           <option value="environment">Rear Camera</option>
