@@ -43,12 +43,15 @@ const Home: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const webcamRef = useRef<Webcam>(null);
+const [focalLength, setFocalLength] = useState<number | null>(null);
 
   const [resolution, setResolution] = useState(resolutions[0]);
   const [dimensions, setDimensions] = useState<{
     width: number;
     height: number;
   } | null>(null); // Start with null
+
+  
 
   // Update dimensions on client side after mount
   useEffect(() => {
@@ -79,9 +82,12 @@ const Home: React.FC = () => {
 
   // Upload captured image to the backend
   const uploadImage = useCallback(
-    async (file: Blob, isCalibration: boolean) => {
+    async (file: Blob, isCalibration: boolean, focalLength?: number) => {
       const formData = new FormData();
       formData.append('file', file);
+      if (!isCalibration && focalLength) {
+        formData.append('focal_length', focalLength.toString());
+      }
 
       try {
         const endpoint = isCalibration ? '/api/calibrate' : '/api/measure';
@@ -110,6 +116,7 @@ const Home: React.FC = () => {
     [backendUrl],
   );
 
+
   // Capture image from the webcam and upload it
   const handleCapture = useCallback(
     async (isCalibration: boolean) => {
@@ -120,7 +127,6 @@ const Home: React.FC = () => {
           setPreviewUrl(imageSrc);
           const blob = await fetch(imageSrc).then((res) => res.blob());
 
-          // Convert blob to file
           const file = new File([blob], 'captured-image.jpg', {
             type: blob.type,
           });
@@ -132,12 +138,16 @@ const Home: React.FC = () => {
             useWebWorker: true,
           });
 
-          await uploadImage(compressedFile, isCalibration);
+          await uploadImage(
+            compressedFile,
+            isCalibration,
+            isCalibrated && focalLength != null ? focalLength : undefined,
+          );
         }
         setIsLoading(false);
       }
     },
-    [webcamRef, uploadImage],
+    [webcamRef, uploadImage, isCalibrated, focalLength],
   );
 
 
