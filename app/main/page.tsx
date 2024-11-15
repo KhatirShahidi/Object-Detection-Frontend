@@ -78,7 +78,11 @@ const [focalLength, setFocalLength] = useState<number | null>(null);
     : {}; // Empty object if dimensions are not set
 
   const backendUrl =
-    process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
+    process.env.NEXT_PUBLIC_BACKEND_URL ||
+    'https://object-detection-backend-spyy.onrender.com';
+
+  console.log('Backend URL:', backendUrl);
+
 
   // Upload captured image to the backend
   const uploadImage = useCallback(
@@ -89,29 +93,36 @@ const [focalLength, setFocalLength] = useState<number | null>(null);
         formData.append('focal_length', focalLength.toString());
       }
 
-      try {
-        const endpoint = isCalibration ? '/api/calibrate' : '/api/measure';
-        const response = await fetch(`${backendUrl}${endpoint}`, {
-          method: 'POST',
-          body: formData,
-        });
+       try {
+         const endpoint = isCalibration ? '/api/calibrate' : '/api/measure';
+         console.log('Starting image upload...');
+         const response = await fetch(`${backendUrl}${endpoint}`, {
+           method: 'POST',
+           body: formData,
+           headers: {
+             Accept: 'application/json',
+             'Content-Type': 'multipart/form-data',
+           },
+         });
+         console.log('Image uploaded successfully:', response);
 
-        const data: ApiResponse = await response.json();
 
-        if (isCalibration && data.success) {
-          setIsCalibrated(true);
-          alert(messages.en.calibrationSuccess);
-        } else if (isCalibration) {
-          alert(messages.en.calibrationFailure);
-        } else if (!isCalibration && data.distance !== undefined) {
-          setDistance(data.distance);
-        } else if (!isCalibration) {
-          setErrorMessage(messages.en.measurementFailure);
-        }
-      } catch (error) {
-        console.error('Error uploading image:', error);
-        setErrorMessage('Failed to upload image. Please try again.');
-      }
+         const data: ApiResponse = await response.json();
+
+         if (isCalibration && data.success) {
+           setIsCalibrated(true);
+           alert(messages.en.calibrationSuccess);
+         } else if (isCalibration) {
+           alert(messages.en.calibrationFailure);
+         } else if (!isCalibration && data.distance !== undefined) {
+           setDistance(data.distance);
+         } else if (!isCalibration) {
+           setErrorMessage(messages.en.measurementFailure);
+         }
+       } catch (error) {
+         console.error('Error uploading image:', error);
+         setErrorMessage('Failed to upload image. Please try again.');
+       }
     },
     [backendUrl],
   );
