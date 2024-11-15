@@ -10,7 +10,26 @@ interface ApiResponse {
 }
 
 // OverlayFrame Component
-const OverlayFrame: React.FC = () => <div className="overlay-frame"></div>;
+// OverlayFrame Component with dynamic size based on resolution
+const OverlayFrame: React.FC<{ width: number; height: number }> = ({ width, height }) => {
+  const overlayWidth = Math.min(100, (50 / width) * 100); // Adjust based on resolution
+  const overlayHeight = Math.min(100, (50 / height) * 100); // Adjust based on resolution
+  return (
+    <div
+      className="overlay-frame"
+      style={{
+        position: 'absolute',
+        top: '50%',
+        left: '50%',
+        width: `${overlayWidth}%`,
+        height: `${overlayHeight}%`,
+        transform: 'translate(-50%, -50%)',
+        border: '3px solid green',
+        borderRadius: '8px',
+      }}
+    ></div>
+  );
+};
 
 // Available resolutions
 const resolutions = [
@@ -50,8 +69,30 @@ const Home: React.FC = () => {
     width: number;
     height: number;
   } | null>(null); // Start with null
+  const [cameraCapabilities, setCameraCapabilities] = useState<any>(null);
 
-  
+  useEffect(() => {
+    async function getCameraCapabilities() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment' },
+        });
+        const track = stream.getVideoTracks()[0];
+        const capabilities = track.getCapabilities
+          ? track.getCapabilities()
+          : {};
+        setCameraCapabilities(capabilities);
+
+        // Stop the stream to free up the camera
+        track.stop();
+      } catch (error) {
+        console.error('Error accessing camera capabilities:', error);
+      }
+    }
+
+    getCameraCapabilities();
+  }, []);
+
 
   // Update dimensions on client side after mount
   useEffect(() => {
@@ -69,13 +110,18 @@ const Home: React.FC = () => {
     return () => window.removeEventListener('resize', updateDimensions);
   }, [resolution]);
 
-  const videoConstraints = dimensions
+  const videoConstraints = cameraCapabilities
     ? {
         facingMode: 'environment',
-        width: { ideal: dimensions.width },
-        height: { ideal: dimensions.height },
+        width: { ideal: cameraCapabilities.width.max || dimensions?.width },
+        height: { ideal: cameraCapabilities.height.max || dimensions?.height },
       }
-    : {}; // Empty object if dimensions are not set
+    : {
+        facingMode: 'environment',
+        width: { ideal: dimensions?.width },
+        height: { ideal: dimensions?.height },
+      };
+
 
   const backendUrl =
     process.env.NEXT_PUBLIC_BACKEND_URL ||
@@ -135,9 +181,7 @@ const Home: React.FC = () => {
         setIsLoading(true);
         const imageSrc = webcamRef.current.getScreenshot();
         if (imageSrc) {
-          setPreviewUrl(imageSrc);
           const blob = await fetch(imageSrc).then((res) => res.blob());
-
           const file = new File([blob], 'captured-image.jpg', {
             type: blob.type,
           });
@@ -150,14 +194,6 @@ const Home: React.FC = () => {
           });
 
           console.log('Captured file:', compressedFile);
-          console.log('Is calibration:', isCalibration);
-          console.log('Focal length:', focalLength);
-          console.log(
-            'Calibration successful, focalLength set to:',
-            focalLength,
-          );
-          console.log('Uploading for measurement, focalLength:', focalLength);
-
 
           await uploadImage(
             compressedFile,
@@ -166,8 +202,6 @@ const Home: React.FC = () => {
               ? focalLength
               : undefined,
           );
-
-
         }
         setIsLoading(false);
       }
@@ -176,13 +210,14 @@ const Home: React.FC = () => {
   );
 
 
+
   return (
     <div className="container">
       <h1>{isCalibrated ? messages.en.measure : messages.en.calibrate}</h1>
 
       {/* Only render the webcam after dimensions are set to avoid hydration mismatch */}
       {dimensions && (
-        <div className="webcam-frame">
+        <div className="webcam-frame" style={{ position: 'relative' }}>
           {/* Webcam Feed */}
           <Webcam
             ref={webcamRef}
@@ -192,7 +227,7 @@ const Home: React.FC = () => {
             style={{ width: '100%', borderRadius: '10px' }}
           />
           {/* Overlay Frame */}
-          <OverlayFrame />
+          <OverlayFrame width={dimensions.width} height={dimensions.height} />
         </div>
       )}
 
