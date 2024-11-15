@@ -54,7 +54,7 @@ const Home: React.FC = () => {
           ctx.fillText(
             `${prediction.class} - ${(prediction.score * 100).toFixed(2)}%`,
             x,
-            y > 10 ? y - 5 : 10
+            y > 10 ? y - 5 : 10,
           );
         });
       }
@@ -64,4 +64,43 @@ const Home: React.FC = () => {
     }
   }, [model]);
 
-  // Start object detecti
+  // Start object detection when the model is loaded and the video is ready
+  useEffect(() => {
+    if (isModelLoaded) {
+      requestAnimationFrame(detectObjects);
+    }
+  }, [isModelLoaded, detectObjects]);
+
+  return (
+    <div className="container">
+      <h1>Real-Time Object Detection</h1>
+
+      <div style={{ position: 'relative', display: 'inline-block' }}>
+        {/* Webcam Feed */}
+        <Webcam
+          ref={webcamRef}
+          audio={false}
+          style={{ width: '100%', borderRadius: '10px' }}
+          videoConstraints={{ facingMode: 'environment' }}
+        />
+
+        {/* Canvas for Drawing Bounding Boxes */}
+        <canvas
+          ref={canvasRef}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            zIndex: 1,
+            width: '100%',
+            height: '100%',
+          }}
+        />
+      </div>
+
+      {!isModelLoaded && <p>Loading model...</p>}
+    </div>
+  );
+};
+
+export default Home;
