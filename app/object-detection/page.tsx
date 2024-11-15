@@ -9,6 +9,7 @@ const Home: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isModelLoaded, setIsModelLoaded] = useState(false);
 
+  // Load the model
   useEffect(() => {
     const loadModel = async () => {
       const model = await cocoSsd.load();
@@ -19,6 +20,7 @@ const Home: React.FC = () => {
     loadModel();
   }, []);
 
+  // Detect objects continuously on the video stream
   const detectObjects = async (model: cocoSsd.ObjectDetection) => {
     if (webcamRef.current?.video && canvasRef.current) {
       const video = webcamRef.current.video;
@@ -29,8 +31,11 @@ const Home: React.FC = () => {
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
 
+        // Perform detection
         setInterval(async () => {
           const predictions = await model.detect(video);
+
+          // Clear previous drawings
           ctx.clearRect(0, 0, canvas.width, canvas.height);
 
           predictions.forEach((prediction) => {
@@ -47,7 +52,7 @@ const Home: React.FC = () => {
               y > 10 ? y - 5 : 10,
             );
           });
-        }, 100);
+        }, 100); // Run detection every 100ms
       }
     }
   };
@@ -55,12 +60,16 @@ const Home: React.FC = () => {
   return (
     <div className="container">
       <h1>Real-Time Object Detection</h1>
+
       <div style={{ position: 'relative', display: 'inline-block' }}>
+        {/* Webcam Feed */}
         <Webcam
           ref={webcamRef}
           audio={false}
           style={{ width: '100%', borderRadius: '10px' }}
         />
+
+        {/* Canvas for Drawing Bounding Boxes */}
         <canvas
           ref={canvasRef}
           style={{
