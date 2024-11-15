@@ -7,6 +7,7 @@ interface ApiResponse {
   success: boolean;
   distance?: number;
   focal_length?: number;
+  image?: string;
 }
 
 // OverlayFrame Component
@@ -43,17 +44,16 @@ const messages = {
     calibrate: 'Calibrate Camera',
     measure: 'Measure Distance',
     calibrationInstruction:
-      'Please place the cigarette box exactly 30 cm from the camera and fit it into the green box.',
+      'Please place the reference object at exactly 30 cm from the camera.',
     measurementInstruction:
-      'Fit the cigarette box within the frame to measure distance.',
+      'Fit the object within the frame to measure distance.',
     processing: 'Processing...',
     calibrationSuccess: 'Calibration successful!',
     calibrationFailure: 'Calibration failed. Please try again.',
     measurementFailure:
-      'Failed to measure distance. Please ensure the box is within the frame.',
+      'Failed to measure distance. Please ensure the object is visible.',
     retry: 'Retry',
   },
-  // Add other languages here
 };
 
 const Home: React.FC = () => {
@@ -163,10 +163,23 @@ useEffect(() => {
           setFocalLength(data.focal_length);
           setIsCalibrated(true);
           alert(messages.en.calibrationSuccess);
-        } else if (!isCalibration && data.distance !== undefined) {
-          setDistance(data.distance);
-          alert(`Estimated Distance: ${data.distance.toFixed(2)} cm`);
-        } else if (!isCalibration) {
+        } else if (!isCalibration && data.success) {
+          setDistance(data.distance ?? null);
+          if (data.image) {
+            const blob = new Blob(
+              [
+                new Uint8Array(
+                  atob(data.image)
+                    .split('')
+                    .map((char) => char.charCodeAt(0)),
+                ),
+              ],
+              { type: 'image/jpeg' },
+            );
+            const url = URL.createObjectURL(blob);
+            setPreviewUrl(url);
+          }
+        } else {
           setErrorMessage(messages.en.measurementFailure);
         }
       } catch (error) {
