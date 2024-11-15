@@ -91,6 +91,7 @@ const Home: React.FC = () => {
 
       // Only include focal_length if it's a measurement request
       if (!isCalibration && focalLength !== undefined) {
+        console.log('Sending focal_length:', focalLength); // Debug log
         formData.append('focal_length', focalLength.toString());
       }
 
@@ -105,6 +106,10 @@ const Home: React.FC = () => {
         });
 
         const data: ApiResponse = await response.json();
+
+        if (response.status === 422) {
+          console.error('Received 422 Error:', data);
+        }
 
         if (isCalibration && data.success) {
           setIsCalibrated(true);
@@ -123,6 +128,7 @@ const Home: React.FC = () => {
     },
     [backendUrl],
   );
+
 
 
   // Capture image from the webcam and upload it
@@ -145,6 +151,10 @@ const Home: React.FC = () => {
             maxWidthOrHeight: 1280,
             useWebWorker: true,
           });
+
+          console.log('Captured file:', compressedFile);
+          console.log('Is calibration:', isCalibration);
+          console.log('Focal length:', focalLength);
 
           await uploadImage(
             compressedFile,
