@@ -70,6 +70,18 @@ const Home: React.FC = () => {
     height: number;
   } | null>(null); // Start with null
   const [cameraCapabilities, setCameraCapabilities] = useState<any>(null);
+const [facingMode, setFacingMode] = useState<'user' | 'environment'>(
+  'environment',
+  );
+  const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
+
+useEffect(() => {
+  async function getDevices() {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    setDevices(devices.filter(device => device.kind === 'videoinput'));
+  }
+  getDevices();
+}, []);
 
   useEffect(() => {
     async function getCameraCapabilities() {
@@ -110,17 +122,11 @@ const Home: React.FC = () => {
     return () => window.removeEventListener('resize', updateDimensions);
   }, [resolution]);
 
-  const videoConstraints = cameraCapabilities
-    ? {
-        facingMode: 'environment',
-        width: { ideal: cameraCapabilities.width.max || dimensions?.width },
-        height: { ideal: cameraCapabilities.height.max || dimensions?.height },
-      }
-    : {
-        facingMode: 'environment',
-        width: { ideal: dimensions?.width },
-        height: { ideal: dimensions?.height },
-      };
+  const videoConstraints = {
+    facingMode,
+    width: { ideal: dimensions?.width || 1280 },
+    height: { ideal: dimensions?.height || 720 },
+  };
 
 
   const backendUrl =
@@ -230,6 +236,20 @@ const Home: React.FC = () => {
           <OverlayFrame width={dimensions.width} height={dimensions.height} />
         </div>
       )}
+
+      <div>
+        <label htmlFor="camera-select">Camera: </label>
+        <select
+          id="camera-select"
+          value={facingMode}
+          onChange={(e) =>
+            setFacingMode(e.target.value as 'user' | 'environment')
+          }
+        >
+          <option value="user">Front Camera</option>
+          <option value="environment">Rear Camera</option>
+        </select>
+      </div>
 
       {/* Resolution Selector */}
       <div>
