@@ -89,7 +89,7 @@ const Home: React.FC = () => {
       const formData = new FormData();
       formData.append('file', file);
 
-      // Only add the focal length if it's a measurement request and focalLength is provided
+      // Only include focal_length if it's a measurement request
       if (!isCalibration && focalLength !== undefined) {
         formData.append('focal_length', focalLength.toString());
       }
@@ -124,6 +124,7 @@ const Home: React.FC = () => {
     [backendUrl],
   );
 
+
   // Capture image from the webcam and upload it
   const handleCapture = useCallback(
     async (isCalibration: boolean) => {
@@ -150,6 +151,7 @@ const Home: React.FC = () => {
             isCalibration,
             isCalibrated && focalLength != null ? focalLength : undefined,
           );
+
         }
         setIsLoading(false);
       }
