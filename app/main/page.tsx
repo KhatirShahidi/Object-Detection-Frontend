@@ -86,46 +86,41 @@ const [focalLength, setFocalLength] = useState<number | null>(null);
 
   // Upload captured image to the backend
   const uploadImage = useCallback(
-    async (file: Blob, isCalibration: boolean, focalLength?: number) => {
+    async (file: Blob, isCalibration: boolean) => {
       const formData = new FormData();
       formData.append('file', file);
-      if (!isCalibration && focalLength) {
-        formData.append('focal_length', focalLength.toString());
+      console.log('FormData:', formData.get('file')); // Debugging line
+
+      try {
+        const endpoint = isCalibration ? '/api/calibrate' : '/api/measure';
+        const response = await fetch(`${backendUrl}${endpoint}`, {
+          method: 'POST',
+          body: formData,
+          headers: {
+            Accept: 'application/json',
+          },
+        });
+
+        const data: ApiResponse = await response.json();
+
+        if (isCalibration && data.success) {
+          setIsCalibrated(true);
+          alert(messages.en.calibrationSuccess);
+        } else if (isCalibration) {
+          alert(messages.en.calibrationFailure);
+        } else if (!isCalibration && data.distance !== undefined) {
+          setDistance(data.distance);
+        } else if (!isCalibration) {
+          setErrorMessage(messages.en.measurementFailure);
+        }
+      } catch (error) {
+        console.error('Error uploading image:', error);
+        setErrorMessage('Failed to upload image. Please try again.');
       }
-
-       try {
-         const endpoint = isCalibration ? '/api/calibrate' : '/api/measure';
-         console.log('Starting image upload...');
-         const response = await fetch(`${backendUrl}${endpoint}`, {
-           method: 'POST',
-           body: formData,
-           headers: {
-             Accept: 'application/json',
-             'Content-Type': 'multipart/form-data',
-           },
-         });
-         console.log('Image uploaded successfully:', response);
-
-
-         const data: ApiResponse = await response.json();
-
-         if (isCalibration && data.success) {
-           setIsCalibrated(true);
-           alert(messages.en.calibrationSuccess);
-         } else if (isCalibration) {
-           alert(messages.en.calibrationFailure);
-         } else if (!isCalibration && data.distance !== undefined) {
-           setDistance(data.distance);
-         } else if (!isCalibration) {
-           setErrorMessage(messages.en.measurementFailure);
-         }
-       } catch (error) {
-         console.error('Error uploading image:', error);
-         setErrorMessage('Failed to upload image. Please try again.');
-       }
     },
     [backendUrl],
   );
+
 
 
   // Capture image from the webcam and upload it
